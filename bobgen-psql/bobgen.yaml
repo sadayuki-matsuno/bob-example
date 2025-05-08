@@ -1,0 +1,12 @@
+# https://bob.stephenafamo.com/docs/code-generation/configuration
+wipe: true
+struct_tag_casing: camel
+no_factory: true
+# https://bob.stephenafamo.com/docs/code-generation/psql
+psql:
+  dsn: postgres://bob:test@localhost:5433/testdb?sslmode=disable
+  output: ../example/models
+  pkgname: models
+  except:
+    goose_db_version:
+    "/^pg_stat_statements/":

@@ -1,0 +1,13 @@
+services:
+  psql:
+    image: postgres:15
+    environment:
+      PORT: 5432
+      POSTGRES_USER: bob 
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: testdb
+      TZ: "Asia/Tokyo"
+    volumes:
+      - ./docker/db:/docker-entrypoint-initdb.d
+    ports:
+      - 127.0.0.1:5433:5432
