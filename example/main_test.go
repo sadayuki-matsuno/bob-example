@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -48,12 +49,16 @@ func TestTheLoad(t *testing.T) {
 		postInsertQueries = append(postInsertQueries, post)
 	}
 
-	if _, err := models.Users.Insert(userInsertQueries).All(ctx, client); err != nil {
-		t.Fatalf("failed to insert user %v", err)
+	for userInsertQuery := range slices.Chunk(userInsertQueries, 10000) {
+		if _, err := models.Users.Insert(userInsertQuery).All(ctx, client); err != nil {
+			t.Fatalf("failed to insert user %v", err)
+		}
 	}
 
-	if _, err := models.Posts.Insert(postInsertQueries).All(ctx, client); err != nil {
-		t.Fatalf("failed to insert post %v", err)
+	for postInsertQuery := range slices.Chunk(postInsertQueries, 10000) {
+		if _, err := models.Posts.Insert(postInsertQuery).All(ctx, client); err != nil {
+			t.Fatalf("failed to insert post %v", err)
+		}
 	}
 
 	t.Run("ThenLoad", func(t *testing.T) {
