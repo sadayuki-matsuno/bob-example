@@ -64,7 +64,13 @@ func TestTheLoad(t *testing.T) {
 	t.Run("ThenLoad", func(t *testing.T) {
 		var users models.UserSlice
 		if users, err = models.Users.Query(
-			models.ThenLoadUserPosts(),
+			models.SelectWhere.Users.ID.In([]int32{2, 3, 4}...),
+			models.ThenLoadUserPosts(
+				models.SelectWhere.Posts.ID.In([]int32{1, 2, 3, 4}...),
+				models.PreloadPostUser(
+					models.ThenLoadUserPosts(),
+				),
+			),
 		).All(ctx, bob.Debug(client)); err != nil {
 			t.Fatalf("Failed to reload user: %v", err)
 		}
