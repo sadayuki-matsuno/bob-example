@@ -3,7 +3,7 @@ module bobgen-psql
 go 1.24.1
 
 require (
-	github.com/stephenafamo/bob v0.34.2
+	github.com/stephenafamo/bob v0.34.3-0.20250508021440-d124f9d31c18
 	github.com/urfave/cli/v2 v2.27.6
 )
 

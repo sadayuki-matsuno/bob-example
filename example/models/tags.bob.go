@@ -23,6 +23,7 @@ import (
 	"github.com/stephenafamo/bob/dialect/psql/um"
 	"github.com/stephenafamo/bob/expr"
 	"github.com/stephenafamo/bob/mods"
+	"github.com/stephenafamo/bob/types/pgtypes"
 	"github.com/stephenafamo/scan"
 )
 
@@ -503,13 +504,16 @@ func (o *Tag) PostTags(mods ...bob.Mod[*dialect.SelectQuery]) PostTagsQuery {
 }
 
 func (os TagSlice) PostTags(mods ...bob.Mod[*dialect.SelectQuery]) PostTagsQuery {
-	PKArgs := make([]bob.Expression, len(os))
+	pkID := make(pgtypes.Array[int32], len(os))
 	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.ID)
+		pkID[i] = o.ID
 	}
+	PKArgExpr := psql.Select(sm.Columns(
+		psql.F("unnest", psql.Cast(psql.Arg(pkID), "integer[]")),
+	))
 
 	return PostTags.Query(append(mods,
-		sm.Where(psql.Group(PostTagColumns.TagID).In(PKArgs...)),
+		sm.Where(psql.Group(PostTagColumns.TagID).In(PKArgExpr)),
 	)...)
 }
 

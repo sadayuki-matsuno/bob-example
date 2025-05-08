@@ -24,6 +24,7 @@ import (
 	"github.com/stephenafamo/bob/expr"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/bob/orm"
+	"github.com/stephenafamo/bob/types/pgtypes"
 	"github.com/stephenafamo/scan"
 )
 
@@ -532,13 +533,16 @@ func (o *PostTag) Post(mods ...bob.Mod[*dialect.SelectQuery]) PostsQuery {
 }
 
 func (os PostTagSlice) Post(mods ...bob.Mod[*dialect.SelectQuery]) PostsQuery {
-	PKArgs := make([]bob.Expression, len(os))
+	pkPostID := make(pgtypes.Array[int32], len(os))
 	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.PostID)
+		pkPostID[i] = o.PostID
 	}
+	PKArgExpr := psql.Select(sm.Columns(
+		psql.F("unnest", psql.Cast(psql.Arg(pkPostID), "integer[]")),
+	))
 
 	return Posts.Query(append(mods,
-		sm.Where(psql.Group(PostColumns.ID).In(PKArgs...)),
+		sm.Where(psql.Group(PostColumns.ID).In(PKArgExpr)),
 	)...)
 }
 
@@ -550,13 +554,16 @@ func (o *PostTag) Tag(mods ...bob.Mod[*dialect.SelectQuery]) TagsQuery {
 }
 
 func (os PostTagSlice) Tag(mods ...bob.Mod[*dialect.SelectQuery]) TagsQuery {
-	PKArgs := make([]bob.Expression, len(os))
+	pkTagID := make(pgtypes.Array[int32], len(os))
 	for i, o := range os {
-		PKArgs[i] = psql.ArgGroup(o.TagID)
+		pkTagID[i] = o.TagID
 	}
+	PKArgExpr := psql.Select(sm.Columns(
+		psql.F("unnest", psql.Cast(psql.Arg(pkTagID), "integer[]")),
+	))
 
 	return Tags.Query(append(mods,
-		sm.Where(psql.Group(TagColumns.ID).In(PKArgs...)),
+		sm.Where(psql.Group(TagColumns.ID).In(PKArgExpr)),
 	)...)
 }
 

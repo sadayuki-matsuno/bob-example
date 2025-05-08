@@ -34,7 +34,7 @@ func TestTheLoad(t *testing.T) {
 		user := &models.UserSetter{
 			ID:    omit.From(int32(i)),
 			Name:  omit.From(fmt.Sprintf("User %d", i)),
-			Email: omit.From(fmt.Sprintf("email-%d@omerid.com", i)),
+			Email: omit.From(fmt.Sprintf("email-%d@example.com", i)),
 			// 必要に応じて他のフィールドも指定
 		}
 		userInsertQueries = append(userInsertQueries, user)
@@ -59,10 +59,6 @@ func TestTheLoad(t *testing.T) {
 	t.Run("ThenLoad", func(t *testing.T) {
 		var users models.UserSlice
 		if users, err = models.Users.Query(
-			// psql.WhereOr(
-			// 	models.SelectWhere.Users.ID.EQ(1),
-			// 	models.SelectWhere.Users.ID.EQ(2),
-			// ),
 			models.ThenLoadUserPosts(),
 		).All(ctx, bob.Debug(client)); err != nil {
 			t.Fatalf("Failed to reload user: %v", err)

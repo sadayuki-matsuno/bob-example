@@ -7,7 +7,7 @@ require (
 	github.com/aarondl/opt v0.0.0-20240623220848-083f18ab9536
 	github.com/davecgh/go-spew v1.1.1
 	github.com/lib/pq v1.10.9
-	github.com/stephenafamo/bob v0.34.2
+	github.com/stephenafamo/bob v0.34.3-0.20250508021440-d124f9d31c18
 	github.com/stephenafamo/scan v0.6.2
 )
 
