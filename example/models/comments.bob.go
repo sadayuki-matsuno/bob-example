@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"time"
 
 	"github.com/aarondl/opt/null"
@@ -25,7 +26,6 @@ import (
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/bob/orm"
 	"github.com/stephenafamo/bob/types/pgtypes"
-	"github.com/stephenafamo/scan"
 )
 
 // Comment is an object representing the database table.
@@ -909,51 +909,22 @@ func (comment0 *Comment) AttachUser(ctx context.Context, exec bob.Executor, user
 }
 
 // UpsertByPK uses an executor to upsert the Comment
-func (o *Comment) UpsertByPK(ctx context.Context, exec bob.Executor, s *CommentSetter) error {
-	columns := s.SetColumns()
-	if len(columns) == 0 {
-		return nil
+func (s CommentSetter) UpsertByPK() bob.Mod[*dialect.InsertQuery] {
+	pk := []string{
+		"id",
 	}
 
 	conflictCols := []any{
 		"id",
 	}
 
-	q := psql.Insert(
-		im.Into("comments"),
-		im.OnConflict(conflictCols...).
-			DoUpdate(im.SetExcluded(columns...)),
-		im.Returning("id", "post_id", "user_id", "body", "created_at", "updated_at"),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[Comment]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+	return im.OnConflict(conflictCols...).
+		DoUpdate(im.SetExcluded(slices.DeleteFunc(s.SetColumns(), func(n string) bool {
+			return slices.Contains(pk, n)
+		})...))
 }
 
 // UpsertDoNothing uses an executor to upsert the Comment
-func (o *Comment) UpsertDoNothing(ctx context.Context, exec bob.Executor, s *CommentSetter) error {
-	conflictCols := []any{
-		"id",
-	}
-
-	q := psql.Insert(
-		im.Into("comments"),
-		im.Returning("id", "post_id", "user_id", "body", "created_at", "updated_at"),
-		im.OnConflict(conflictCols...).DoNothing(),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[Comment]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+func (s CommentSetter) UpsertDoNothing() bob.Mod[*dialect.InsertQuery] {
+	return im.OnConflict().DoNothing()
 }

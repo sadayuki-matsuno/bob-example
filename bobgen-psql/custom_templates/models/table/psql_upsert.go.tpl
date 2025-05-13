@@ -2,107 +2,56 @@
 {{$tAlias := .Aliases.Table $table.Key -}}
 {{if .Table.Constraints.Primary -}}
 {{$.Importer.Import (printf "github.com/stephenafamo/bob/dialect/%s/im" $.Dialect)}}
-{{$.Importer.Import "github.com/stephenafamo/scan" }}
-
+{{$.Importer.Import "github.com/stephenafamo/bob/dialect/psql/dialect"}}
+{{$.Importer.Import "slices" }}
 
 
 // UpsertByPK uses an executor to upsert the {{$tAlias.UpSingular}}
-func (o *{{$tAlias.UpSingular}}) UpsertByPK(ctx context.Context, exec bob.Executor, s *{{$tAlias.UpSingular}}Setter) error {
-	columns := s.SetColumns()
-  if len(columns) == 0 {
-    return nil
+func (s {{$tAlias.UpSingular}}Setter) UpsertByPK() bob.Mod[*dialect.InsertQuery] {
+  pk := []string{
+  {{ range $table.Constraints.Primary.Columns }} 
+    "{{.}}",
+  {{- end }}
   }
 
   conflictCols := []any{
   {{ range $table.Constraints.Primary.Columns }} 
     "{{.}}",
-  {{ end }}
+  {{- end }}
   }
 
-	q := psql.Insert(
-		im.Into("{{$table.Key }}"),
-	  im.OnConflict(conflictCols...).
-		  DoUpdate(im.SetExcluded(columns...)),
-		im.Returning(
-      {{- range $table.Columns -}}
-        "{{- .Name -}}",
-      {{- end -}}
-    ),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[{{$tAlias.UpSingular}}]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+  return im.OnConflict(conflictCols...).
+			DoUpdate(im.SetExcluded(slices.DeleteFunc(s.SetColumns(), func(n string) bool {
+					return slices.Contains(pk, n)
+		})...))
 }
-{{- end}}
 
 // UpsertDoNothing uses an executor to upsert the {{$tAlias.UpSingular}}
-func (o *{{$tAlias.UpSingular}}) UpsertDoNothing(ctx context.Context, exec bob.Executor, s *{{$tAlias.UpSingular}}Setter) error {
-  conflictCols := []any{
-  {{ range $table.Constraints.Primary.Columns }} 
-    "{{.}}",
-  {{ end }}
-  }
-
-	q := psql.Insert(
-		im.Into("{{$table.Key }}"),
-		im.Returning(
-      {{- range $table.Columns -}}
-        "{{- .Name -}}",
-      {{- end -}}
-    ),
-    im.OnConflict(conflictCols...).DoNothing(),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[{{$tAlias.UpSingular}}]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+func (s {{$tAlias.UpSingular}}Setter) UpsertDoNothing() bob.Mod[*dialect.InsertQuery] {
+  return im.OnConflict().DoNothing()
 }
 
 {{ range $unique := .Table.Constraints.Uniques -}}
 {{$upperUniqueName := titleCase $unique.Name}}
 // UpsertBy{{$upperUniqueName}}  uses an executor to upsert the {{$unique.Name}} 
 // [{{ range $unique.Columns -}} "{{.}}", {{- end }}]
-func (o *{{$tAlias.UpSingular}}) UpsertBy{{$upperUniqueName}}(ctx context.Context, exec bob.Executor, s *{{$tAlias.UpSingular}}Setter) error {
-	columns := s.SetColumns()
-  if len(columns) == 0 {
-    return nil
-  }
-
-  conflictCols := []any{
-  {{ range $unique.Columns -}} 
+func (s {{$tAlias.UpSingular}}Setter) UpsertBy{{$upperUniqueName}}() bob.Mod[*dialect.InsertQuery] {
+  pk := []string{
+  {{ range $table.Constraints.Primary.Columns }} 
     "{{.}}",
   {{- end }}
   }
 
-	q := psql.Insert(
-		im.Into("{{$table.Key }}"),
-    im.OnConflict(conflictCols...).
-  		DoUpdate(im.SetExcluded(columns...)),
-		im.Returning(
-      {{- range $table.Columns -}}
-        "{{- .Name -}}",
-      {{- end -}}
-    ),
-	)
+  conflictCols := []any{
+  {{ range $unique.Columns }} 
+    "{{.}}",
+  {{- end }}
+  }
 
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[{{$tAlias.UpSingular}}]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+  return im.OnConflict(conflictCols...).
+			DoUpdate(im.SetExcluded(slices.DeleteFunc(s.SetColumns(), func(n string) bool {
+					return slices.Contains(pk, n)
+		})...))
 }
+{{- end}}
 {{- end}}

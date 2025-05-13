@@ -139,3 +139,49 @@ func TestUpdate(t *testing.T) {
 	}
 	spew.Dump(newUser2)
 }
+
+func TestUpsert(t *testing.T) {
+	ctx := context.Background()
+	sqldb, err := sql.Open("txdb", fmt.Sprintf("connection_%d", time.Now().UnixNano()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqldb.Close()
+	client := bob.NewDB(sqldb)
+
+	user1 := &models.UserSetter{
+		ID:    omit.From(int32(1)),
+		Name:  omit.From("User"),
+		Email: omit.From("email@example.com"),
+	}
+
+	if _, err = models.Users.Insert(
+		user1,
+	).Exec(ctx, client); err != nil {
+		t.Fatalf("failed to insert user %v", err)
+	}
+
+	user1update := &models.UserSetter{
+		Name:  omit.From("User2"),
+		Email: omit.From("email1update@example.com"),
+	}
+
+	user2 := &models.UserSetter{
+		Name:  omit.From("User3"),
+		Email: omit.From("email@example.com"),
+	}
+
+	if _, err = models.Users.Insert(
+		user1update,
+		user2,
+		user1.UpsertByUsersEmailKey(),
+	).Exec(ctx, bob.Debug(client)); err != nil {
+		t.Fatalf("failed to insert user %v", err)
+	}
+
+	var allUsers models.UserSlice
+	if allUsers, err = models.Users.Query().All(ctx, client); err != nil {
+		t.Fatalf("failed to select user %v", err)
+	}
+	spew.Dump(allUsers)
+}
