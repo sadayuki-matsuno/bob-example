@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"time"
 
 	"github.com/aarondl/opt/null"
@@ -24,7 +25,6 @@ import (
 	"github.com/stephenafamo/bob/expr"
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/bob/types/pgtypes"
-	"github.com/stephenafamo/scan"
 )
 
 // Tag is an object representing the database table.
@@ -683,80 +683,39 @@ func (tag0 *Tag) AttachPostTags(ctx context.Context, exec bob.Executor, related 
 }
 
 // UpsertByPK uses an executor to upsert the Tag
-func (o *Tag) UpsertByPK(ctx context.Context, exec bob.Executor, s *TagSetter) error {
-	columns := s.SetColumns()
-	if len(columns) == 0 {
-		return nil
+func (s TagSetter) UpsertByPK() bob.Mod[*dialect.InsertQuery] {
+	pk := []string{
+		"id",
 	}
 
 	conflictCols := []any{
 		"id",
 	}
 
-	q := psql.Insert(
-		im.Into("tags"),
-		im.OnConflict(conflictCols...).
-			DoUpdate(im.SetExcluded(columns...)),
-		im.Returning("id", "name", "created_at", "updated_at"),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[Tag]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+	return im.OnConflict(conflictCols...).
+		DoUpdate(im.SetExcluded(slices.DeleteFunc(s.SetColumns(), func(n string) bool {
+			return slices.Contains(pk, n)
+		})...))
 }
 
 // UpsertDoNothing uses an executor to upsert the Tag
-func (o *Tag) UpsertDoNothing(ctx context.Context, exec bob.Executor, s *TagSetter) error {
-	conflictCols := []any{
-		"id",
-	}
-
-	q := psql.Insert(
-		im.Into("tags"),
-		im.Returning("id", "name", "created_at", "updated_at"),
-		im.OnConflict(conflictCols...).DoNothing(),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[Tag]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+func (s TagSetter) UpsertDoNothing() bob.Mod[*dialect.InsertQuery] {
+	return im.OnConflict().DoNothing()
 }
 
 // UpsertByTagsNameKey  uses an executor to upsert the tags_name_key
 // ["name",]
-func (o *Tag) UpsertByTagsNameKey(ctx context.Context, exec bob.Executor, s *TagSetter) error {
-	columns := s.SetColumns()
-	if len(columns) == 0 {
-		return nil
+func (s TagSetter) UpsertByTagsNameKey() bob.Mod[*dialect.InsertQuery] {
+	pk := []string{
+		"id",
 	}
 
 	conflictCols := []any{
 		"name",
 	}
 
-	q := psql.Insert(
-		im.Into("tags"),
-		im.OnConflict(conflictCols...).
-			DoUpdate(im.SetExcluded(columns...)),
-		im.Returning("id", "name", "created_at", "updated_at"),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[Tag]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+	return im.OnConflict(conflictCols...).
+		DoUpdate(im.SetExcluded(slices.DeleteFunc(s.SetColumns(), func(n string) bool {
+			return slices.Contains(pk, n)
+		})...))
 }

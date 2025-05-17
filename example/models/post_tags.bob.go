@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"time"
 
 	"github.com/aarondl/opt/null"
@@ -25,7 +26,6 @@ import (
 	"github.com/stephenafamo/bob/mods"
 	"github.com/stephenafamo/bob/orm"
 	"github.com/stephenafamo/bob/types/pgtypes"
-	"github.com/stephenafamo/scan"
 )
 
 // PostTag is an object representing the database table.
@@ -865,55 +865,24 @@ func (postTag0 *PostTag) AttachTag(ctx context.Context, exec bob.Executor, tag1 
 }
 
 // UpsertByPK uses an executor to upsert the PostTag
-func (o *PostTag) UpsertByPK(ctx context.Context, exec bob.Executor, s *PostTagSetter) error {
-	columns := s.SetColumns()
-	if len(columns) == 0 {
-		return nil
+func (s PostTagSetter) UpsertByPK() bob.Mod[*dialect.InsertQuery] {
+	pk := []string{
+		"post_id",
+		"tag_id",
 	}
 
 	conflictCols := []any{
 		"post_id",
-
 		"tag_id",
 	}
 
-	q := psql.Insert(
-		im.Into("post_tags"),
-		im.OnConflict(conflictCols...).
-			DoUpdate(im.SetExcluded(columns...)),
-		im.Returning("post_id", "tag_id", "created_at", "updated_at"),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[PostTag]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+	return im.OnConflict(conflictCols...).
+		DoUpdate(im.SetExcluded(slices.DeleteFunc(s.SetColumns(), func(n string) bool {
+			return slices.Contains(pk, n)
+		})...))
 }
 
 // UpsertDoNothing uses an executor to upsert the PostTag
-func (o *PostTag) UpsertDoNothing(ctx context.Context, exec bob.Executor, s *PostTagSetter) error {
-	conflictCols := []any{
-		"post_id",
-
-		"tag_id",
-	}
-
-	q := psql.Insert(
-		im.Into("post_tags"),
-		im.Returning("post_id", "tag_id", "created_at", "updated_at"),
-		im.OnConflict(conflictCols...).DoNothing(),
-	)
-
-	q.Apply(s)
-	ret, err := bob.One(ctx, exec, q, scan.StructMapper[PostTag]())
-	if err != nil {
-		return err
-	}
-	*o = ret
-
-	return nil
+func (s PostTagSetter) UpsertDoNothing() bob.Mod[*dialect.InsertQuery] {
+	return im.OnConflict().DoNothing()
 }
