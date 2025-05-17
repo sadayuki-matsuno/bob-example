@@ -139,3 +139,30 @@ func TestUpdate(t *testing.T) {
 	}
 	spew.Dump(newUser2)
 }
+
+func TestJoin(t *testing.T) {
+	ctx := context.Background()
+	sqldb, err := sql.Open("txdb", fmt.Sprintf("connection_%d", time.Now().UnixNano()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sqldb.Close()
+	client := bob.NewDB(sqldb)
+
+	user := &models.UserSetter{
+		Name:  omit.From("User"),
+		Email: omit.From("email@example.com"),
+	}
+	if _, err = models.Users.Insert(user).Exec(ctx, client); err != nil {
+		t.Fatalf("failed to insert user %v", err)
+	}
+
+	var newUser2 *models.User
+	if newUser2, err = models.Users.Query(
+		models.SelectJoins.Users.InnerJoin.Posts(ctx),
+		models.SelectJoins.Users.InnerJoin.Posts(ctx),
+	).One(ctx, bob.Debug(client)); err != nil {
+		t.Fatalf("failed to update user %v", err)
+	}
+	spew.Dump(newUser2)
+}
